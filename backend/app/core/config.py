@@ -44,9 +44,19 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = "barclays-credit-platform"
     S3_LOGS_BUCKET: str = "barclays-credit-platform-logs"
     
-    # OpenAI / GenAI
+    # LLM / GenAI
+    LLM_PROVIDER: str = "openrouter"  # openrouter | openai
+
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4-turbo-preview"
+    OPENAI_BASE_URL: Optional[str] = None
+
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_MODEL: str = "meta-llama/llama-3.1-8b-instruct:free"
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    OPENROUTER_SITE_URL: Optional[str] = None
+    OPENROUTER_APP_NAME: str = "Barclays Credit Intelligence Platform"
+
     OPENAI_TEMPERATURE: float = 0.7
     OPENAI_MAX_TOKENS: int = 500
     

@@ -30,16 +30,28 @@ class ChatbotService:
     - Cannot provide specific legal/financial advice
     """
     
-    def __init__(self, api_key: str, model: str = "gpt-4o"):
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gpt-4o",
+        base_url: Optional[str] = None,
+        site_url: Optional[str] = None,
+        app_name: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 500,
+    ):
         """
         Initialize chatbot.
         
         Args:
-            api_key: OpenAI API key from environment
+            api_key: Provider API key from environment
             model: Model name ('gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo', etc.)
         """
         self.api_key = api_key
         self.model = model
+        self.base_url = base_url
+        self.temperature = temperature
+        self.max_tokens = max_tokens
         self.client = None
         self._openai_mode = None
         
@@ -48,18 +60,35 @@ class ChatbotService:
                 try:
                     openai_pkg = importlib.import_module("openai")
                     OpenAI = getattr(openai_pkg, "OpenAI")
-                    self.client = OpenAI(api_key=api_key)
+
+                    client_kwargs = {"api_key": api_key}
+                    if base_url:
+                        client_kwargs["base_url"] = base_url
+
+                    # OpenRouter supports app attribution headers.
+                    if base_url and "openrouter.ai" in base_url:
+                        default_headers = {}
+                        if site_url:
+                            default_headers["HTTP-Referer"] = site_url
+                        if app_name:
+                            default_headers["X-Title"] = app_name
+                        if default_headers:
+                            client_kwargs["default_headers"] = default_headers
+
+                    self.client = OpenAI(**client_kwargs)
                     self._openai_mode = "v1"
                 except Exception:
                     openai = importlib.import_module("openai")
                     openai.api_key = api_key
+                    if base_url:
+                        openai.base_url = base_url
                     self.client = openai
                     self._openai_mode = "legacy"
-                logger.info(f"OpenAI client initialized (model: {model})")
+                logger.info(f"LLM client initialized (model: {model})")
             except Exception as e:
-                logger.error(f"Failed to initialize OpenAI: {e}")
+                logger.error(f"Failed to initialize LLM client: {e}")
         else:
-            logger.warning("No OpenAI API key provided - chatbot will use fallback responses")
+            logger.warning("No LLM API key provided - chatbot will use fallback responses")
     
     def generate_system_prompt(self, user_context: Dict) -> str:
         """
@@ -148,8 +177,8 @@ When a user seems distressed about their decision, offer:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
-                    temperature=0.7,
-                    max_tokens=500,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
                     top_p=0.9,
                 )
                 assistant_message = (response.choices[0].message.content or "").strip()
@@ -158,8 +187,8 @@ When a user seems distressed about their decision, offer:
                 response = self.client.ChatCompletion.create(
                     model=self.model,
                     messages=messages,
-                    temperature=0.7,
-                    max_tokens=500,
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
                     top_p=0.9,
                 )
                 assistant_message = (response.choices[0].message.content or "").strip()
@@ -181,7 +210,7 @@ When a user seems distressed about their decision, offer:
             return assistant_message, conversation_history
         
         except Exception as e:
-            logger.error(f"Error calling OpenAI: {e}")
+            logger.error(f"Error calling LLM provider: {e}")
             fallback = self._fallback_response(user_message, user_context)
             conversation_history.append({
                 "role": "assistant",

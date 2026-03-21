@@ -11,9 +11,9 @@ from datetime import datetime
 import uuid
 from sqlalchemy.orm import Session
 import logging
-import os
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.security import get_current_user, TokenData
 from app.services.chatbot_service import ChatbotService
 from app.models.models import LoanApplication, ChatHistory
@@ -24,9 +24,27 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 def get_chatbot_service():
-    """Dependency: Get initialized chatbot service"""
-    api_key = os.getenv("OPENAI_API_KEY", "")
-    return ChatbotService(api_key=api_key)
+    """Dependency: Get initialized chatbot service with configured provider."""
+    provider = (settings.LLM_PROVIDER or "openrouter").lower()
+
+    if provider == "openrouter":
+        return ChatbotService(
+            api_key=settings.OPENROUTER_API_KEY or "",
+            model=settings.OPENROUTER_MODEL,
+            base_url=settings.OPENROUTER_BASE_URL,
+            site_url=settings.OPENROUTER_SITE_URL,
+            app_name=settings.OPENROUTER_APP_NAME,
+            temperature=settings.OPENAI_TEMPERATURE,
+            max_tokens=settings.OPENAI_MAX_TOKENS,
+        )
+
+    return ChatbotService(
+        api_key=settings.OPENAI_API_KEY or "",
+        model=settings.OPENAI_MODEL,
+        base_url=settings.OPENAI_BASE_URL,
+        temperature=settings.OPENAI_TEMPERATURE,
+        max_tokens=settings.OPENAI_MAX_TOKENS,
+    )
 
 
 @router.post("/message")
