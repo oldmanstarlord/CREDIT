@@ -12,7 +12,9 @@ from pydantic import BaseModel
 from app.core.config import settings
 
 # Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use pbkdf2_sha256 as default for stable cross-environment behavior,
+# while keeping bcrypt in the list so existing hashes can still be verified.
+pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 
@@ -33,7 +35,7 @@ class TokenResponse(BaseModel):
 
 
 def hash_password(password: str) -> str:
-    """Hash password using bcrypt"""
+    """Hash password using the default configured passlib scheme."""
     return pwd_context.hash(password)
 
 
