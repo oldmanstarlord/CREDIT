@@ -34,15 +34,29 @@ class FraudCheckService:
             if not aadhaar.isdigit() or len(aadhaar) != 12:
                 return False, "Invalid Aadhaar format"
             
-            # TODO: Implement Verhoeff checksum validation for Aadhaar
-            # For now, basic format check is sufficient
+            # Check for duplicate Aadhaar
+            if self.db:
+                is_dup, reason = self.check_duplicate_aadhaar(aadhaar)
+                if is_dup:
+                    return False, reason
         
         # Phone format check (Indian mobile)
         phone = application_data.get('phone_number', '')
         if not self._is_valid_indian_phone(phone):
             return False, "Invalid phone number format"
         
-        # Email validation is done by Pydantic, skip here
+        # Check for duplicate phone
+        if self.db:
+            is_dup, reason = self.check_duplicate_phone(phone)
+            if is_dup:
+                return False, reason
+        
+        # Email validation done by Pydantic, but check for duplicates
+        email = application_data.get('email')
+        if email and self.db:
+            is_dup, reason = self.check_duplicate_email(email)
+            if is_dup:
+                return False, reason
         
         return True, "Identity valid"
     
@@ -127,9 +141,29 @@ class FraudCheckService:
         Returns:
             fraud_score contribution (0.0-1.0)
         """
-        # TODO: Query database for recent applications from user
-        # For now, return 0.0 (no fraud signal)
-        return 0.0
+        if not self.db or not user_id:
+            return 0.0
+        
+        try:
+            from datetime import datetime, timedelta
+            from app.models.models import LoanApplication
+            
+            cutoff_date = datetime.utcnow() - timedelta(days=time_window_days)
+            recent_apps = self.db.query(LoanApplication).filter(
+                LoanApplication.user_id == user_id,
+                LoanApplication.created_at >= cutoff_date
+            ).count()
+            
+            # 1 recent app is normal, 2+ is suspicious
+            if recent_apps > 2:
+                return 0.5  # Multiple applications = fraud signal
+            elif recent_apps == 2:
+                return 0.2
+            
+            return 0.0
+        except Exception as e:
+            logger.warning(f"Error checking multiple applications: {e}")
+            return 0.0
     
     def check_inconsistent_data_patterns(self, application_data: Dict) -> Dict:
         """
@@ -223,6 +257,75 @@ class FraudCheckService:
         
         # Should be 10 digits starting with 6-9
         return bool(phone.isdigit() and len(phone) == 10 and phone[0] in '6789')
+    
+    def check_duplicate_aadhaar(self, aadhaar: str) -> Tuple[bool, str]:
+        """Check if Aadhaar already exists in database (fraud signal)"""
+        if not self.db:
+            return False, ""
+        
+        try:
+            from app.models.models import LoanApplication, User
+            
+            # Check both applications and users table
+            existing_app = self.db.query(LoanApplication).filter(
+                LoanApplication.aadhaar_number == aadhaar
+            ).first()
+            
+            existing_user = self.db.query(User).filter(
+                User.aadhaar_number == aadhaar
+            ).first()
+            
+            if existing_app or existing_user:
+                return True, "Aadhaar already registered"
+            
+            return False, ""
+        except Exception as e:
+            logger.warning(f"Error checking duplicate Aadhaar: {e}")
+            return False, ""
+    
+    def check_duplicate_phone(self, phone: str) -> Tuple[bool, str]:
+        """Check if phone already exists in database"""
+        if not self.db:
+            return False, ""
+        
+        try:
+            from app.models.models import LoanApplication, User
+            
+            existing_app = self.db.query(LoanApplication).filter(
+                LoanApplication.phone_number == phone
+            ).first()
+            
+            existing_user = self.db.query(User).filter(
+                User.phone_number == phone
+            ).first()
+            
+            if existing_app or existing_user:
+                return True, "Phone number already registered"
+            
+            return False, ""
+        except Exception as e:
+            logger.warning(f"Error checking duplicate phone: {e}")
+            return False, ""
+    
+    def check_duplicate_email(self, email: str) -> Tuple[bool, str]:
+        """Check if email already exists in database"""
+        if not self.db:
+            return False, ""
+        
+        try:
+            from app.models.models import User
+            
+            existing_user = self.db.query(User).filter(
+                User.email == email
+            ).first()
+            
+            if existing_user:
+                return True, "Email already registered"
+            
+            return False, ""
+        except Exception as e:
+            logger.warning(f"Error checking duplicate email: {e}")
+            return False, ""
 
 
     __all__ = ["FraudCheckService", "AuditService"]

@@ -14,7 +14,7 @@ from importlib import import_module
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.database import check_database_connection, engine
-from app.api.routes import applications, auth
+from app.api.routes import applications, auth, admin, chat
 from app.ml.predict import CreditScorer
 from app.models import Base
 
@@ -175,7 +175,8 @@ def create_app() -> FastAPI:
     # app.include_router(users.router, prefix=settings.API_V1_PREFIX, tags=["Users"])
     app.include_router(applications.router, prefix=settings.API_V1_PREFIX, tags=["Applications"])
     # app.include_router(scoring.router, prefix=settings.API_V1_PREFIX, tags=["Scoring"])
-    # app.include_router(admin.router, prefix=settings.API_V1_PREFIX, tags=["Admin"])
+    app.include_router(admin.router, prefix=settings.API_V1_PREFIX, tags=["Admin"])
+    app.include_router(chat.router, prefix=settings.API_V1_PREFIX, tags=["Chat"])
     # app.include_router(analytics.router, prefix=settings.API_V1_PREFIX, tags=["Analytics"])
     
     # ─── ERROR HANDLERS ────────────────────────────────────────────────────

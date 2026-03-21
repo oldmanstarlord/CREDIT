@@ -5,6 +5,7 @@ Enforces business rules and regulatory requirements
 
 from typing import Dict, Tuple
 from app.core.config import settings
+from datetime import datetime, timedelta
 
 import logging
 
@@ -29,8 +30,50 @@ class PolicyEngine:
         "new_user_max_loan": settings.NEW_USER_MAX_LOAN
     }
     
+    # Interest rate matrix by loan size and tenure
+    INTEREST_RATE_MATRIX = {
+        "small_loans_up_to_1_lakh": (18, 25),      # 18–25% for ≤1 lakh
+        "medium_loans_1_to_3_lakh": (12, 18),      # 12–18% for 1-3 lakh
+        "large_loans_3_to_10_lakh": (10, 12),      # 10–12% for 3-10 lakh
+        "premium_above_10_lakh": (8, 10)           # 8–10% for >10 lakh
+    }
+    
+    # Credit ladder tiers
+    CREDIT_LADDER = {
+        "tier_0_new": {
+            "label": "New User",
+            "duration_months": 6,
+            "max_amount": 50000,
+            "interest_range": (18, 25),
+            "requires_collateral": False,
+        },
+        "tier_1_trust_building": {
+            "label": "Trust Building",
+            "duration_months": 12,
+            "max_amount": 500000,
+            "interest_range": (12, 18),
+            "requires_collateral": False,
+        },
+        "tier_2_established": {
+            "label": "Established Borrower",
+            "duration_months": 18,
+            "max_amount": 1000000,
+            "interest_range": (10, 14),
+            "requires_collateral": False,
+        },
+        "tier_3_prime": {
+            "label": "Prime Borrower",
+            "duration_months": 36,
+            "max_amount": None,  # No cap for prime borrowers
+            "interest_range": (8, 10),
+            "requires_collateral": True,
+            "min_credit_score": 650,
+        }
+    }
+    
     def __init__(self, db=None):
         self.db = db
+    
     
     def apply_emi_rule(self, proposed_emi: int, monthly_income: int, 
                        user_category: str) -> Tuple[bool, str]:
@@ -201,4 +244,162 @@ class PolicyEngine:
             'checks_passed': checks_passed,
             'total_checks': total_checks,
             'results': results
+        }
+    
+    def determine_interest_rate(self, loan_amount: int, tenure_months: int, 
+                               credit_score: int, user_category: str) -> Tuple[float, float]:
+        """
+        Determine interest rate range based on loan amount, tenure, and credit score.
+        
+        Returns:
+            (min_rate, max_rate) as percentages
+        """
+        # Base rate from loan size
+        if loan_amount <= 100000:
+            base_range = self.INTEREST_RATE_MATRIX['small_loans_up_to_1_lakh']
+        elif loan_amount <= 300000:
+            base_range = self.INTEREST_RATE_MATRIX['medium_loans_1_to_3_lakh']
+        elif loan_amount <= 1000000:
+            base_range = self.INTEREST_RATE_MATRIX['large_loans_3_to_10_lakh']
+        else:
+            base_range = self.INTEREST_RATE_MATRIX['premium_above_10_lakh']
+        
+        # Adjust for tenure (shorter tenure = higher rate)
+        tenure_multiplier = min(1.0, tenure_months / 36)  # 36 months = 1.0
+        rate_spread = base_range[1] - base_range[0]
+        tenure_adjustment = rate_spread * (1 - tenure_multiplier) * 0.3  # 30% impact
+        
+        # Adjust for credit score (higher score = lower rate)
+        score_multiplier = min(1.0, max(0.0, (credit_score - 500) / 350))  # 500-850 → 0-1
+        score_adjustment = -rate_spread * score_multiplier * 0.3  # 30% impact
+        
+        # Category adjustment
+        category_adjustment = 0
+        if user_category == 'farmer':
+            category_adjustment = 2.0  # Farmers pay 2% more due to seasonal risk
+        elif user_category == 'daily_wage_worker':
+            category_adjustment = 1.5  # Daily wage workers pay 1.5% more
+        
+        min_rate = base_range[0] + tenure_adjustment + score_adjustment + category_adjustment
+        max_rate = base_range[1] + tenure_adjustment + score_adjustment + category_adjustment
+        
+        return float(round(min_rate, 2)), float(round(max_rate, 2))
+    
+    def determine_credit_ladder_tier(self, existing_loans: list, 
+                                    credit_score: int) -> str:
+        """
+        Determine which credit ladder tier a user belongs to based on history.
+        
+        Returns:
+            tier name (tier_0_new, tier_1_trust_building, etc.)
+        """
+        if not existing_loans:
+            return "tier_0_new"
+        
+        # Check time since first loan and repayment history
+        first_loan_date = min(loan.get('created_at', datetime.utcnow()) 
+                             for loan in existing_loans)
+        months_since_first = (datetime.utcnow() - first_loan_date).days / 30
+        
+        # Count on-time repayments
+        on_time_count = sum(1 for loan in existing_loans 
+                          if loan.get('repayment_status') == 'completed')
+        total_count = len(existing_loans)
+        on_time_rate = on_time_count / total_count if total_count > 0 else 0
+        
+        # Tier logic
+        if months_since_first < 6:
+            return "tier_0_new"
+        elif months_since_first < 18 and on_time_rate >= 0.8:
+            return "tier_1_trust_building"
+        elif months_since_first >= 18 and on_time_rate >= 0.9 and credit_score >= 600:
+            return "tier_2_established"
+        elif credit_score >= 650 and on_time_rate >= 0.95:
+            return "tier_3_prime"
+        else:
+            return "tier_1_trust_building"
+    
+    def recommend_loan_terms(self, loan_amount: int, monthly_income: int,
+                            user_category: str, credit_score: int,
+                            existing_loans: list = None) -> Dict:
+        """
+        Recommend loan terms based on applicant profile.
+        
+        Returns:
+            {
+                'recommended_amount': int,
+                'recommended_tenure_months': int,
+                'interest_rate_min': float,
+                'interest_rate_max': float,
+                'estimated_emi_min': float,
+                'estimated_emi_max': float,
+                'credit_tier': str,
+                'reasoning': str
+            }
+        """
+        if existing_loans is None:
+            existing_loans = []
+        
+        # Determine credit tier
+        tier = self.determine_credit_ladder_tier(existing_loans, credit_score)
+        tier_info = self.CREDIT_LADDER[tier]
+        
+        # Cap amount by tier
+        max_tier_amount = tier_info['max_amount']
+        recommended_amount = min(loan_amount, max_tier_amount) if max_tier_amount else loan_amount
+        
+        # Recommend tenure based on category and amount
+        if user_category == 'farmer':
+            # Farmers use seasonal repayment, shorter tenure
+            recommended_tenure = 12
+        elif user_category == 'daily_wage_worker':
+            # Daily workers need short tenure due to income volatility
+            recommended_tenure = 12
+        elif user_category == 'gig_worker':
+            # Gig workers medium tenure
+            recommended_tenure = 18
+        elif user_category == 'msme_owner':
+            # MSME can support longer tenure
+            recommended_tenure = 24
+        else:
+            recommended_tenure = 18  # default
+        
+        # Get interest rates
+        rate_min, rate_max = self.determine_interest_rate(
+            recommended_amount, recommended_tenure, credit_score, user_category
+        )
+        
+        # Calculate EMI
+        monthly_rate_min = rate_min / 100 / 12
+        monthly_rate_max = rate_max / 100 / 12
+        
+        emi_min = (recommended_amount * monthly_rate_min * (1 + monthly_rate_min)**recommended_tenure) / \
+                  ((1 + monthly_rate_min)**recommended_tenure - 1)
+        emi_max = (recommended_amount * monthly_rate_max * (1 + monthly_rate_max)**recommended_tenure) / \
+                  ((1 + monthly_rate_max)**recommended_tenure - 1)
+        
+        # Verify EMI is affordable
+        emi_ratio = emi_max / monthly_income if monthly_income > 0 else 0
+        category_max_ratio = {
+            'farmer': settings.FARMER_EMI_TO_INCOME_MAX,
+            'daily_wage_worker': settings.DAILY_WORKER_EMI_TO_INCOME_MAX,
+        }.get(user_category, settings.EMI_TO_INCOME_MAX_RATIO)
+        
+        if emi_ratio > category_max_ratio:
+            # Adjust amount down
+            target_emi = monthly_income * category_max_ratio
+            recommended_amount = int(target_emi * 12 / rate_max * 100)
+            emi_min = target_emi * 0.95
+            emi_max = target_emi
+        
+        return {
+            'recommended_amount': recommended_amount,
+            'recommended_tenure_months': recommended_tenure,
+            'interest_rate_min': rate_min,
+            'interest_rate_max': rate_max,
+            'estimated_emi_min': round(emi_min, 2),
+            'estimated_emi_max': round(emi_max, 2),
+            'credit_tier': tier,
+            'tier_label': tier_info['label'],
+            'reasoning': f"Based on {tier_info['label']} status with {credit_score} credit score"
         }
