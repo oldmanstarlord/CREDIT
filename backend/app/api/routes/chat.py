@@ -90,11 +90,19 @@ def send_chat_message(
                 for ch in chat_history[-10:]
             ]
             
-            # Prepare user context
+            # Prepare user context from schema-valid fields.
+            category_value = None
+            if app.user and app.user.user_category:
+                category_value = app.user.user_category.value
+            elif app.category_specific_data and app.category_specific_data.user_category:
+                category_value = app.category_specific_data.user_category.value
+
+            app_status = app.final_decision.value if app.final_decision else app.status.value
+
             user_context = {
-                'user_category': app.user_category,
+                'user_category': category_value or 'unknown',
                 'credit_score': app.credit_score or 500,
-                'application_status': app.final_decision or 'submitted',
+                'application_status': app_status,
                 'top_positive_factors': getattr(app, 'top_positive_factors', []) or [],
                 'top_negative_factors': getattr(app, 'top_negative_factors', []) or []
             }
