@@ -230,6 +230,7 @@ class LoanApplication(Base):
     shap_explanation = orm_relationship("SHAPExplanation", back_populates="application", 
                                    cascade="all, delete-orphan", uselist=False)
     appeal = orm_relationship("Appeal", back_populates="application", cascade="all, delete-orphan", uselist=False)
+    chat_messages = orm_relationship("ChatHistory", back_populates="application", cascade="all, delete-orphan")
 
 
 class CategorySpecificData(Base):
@@ -432,6 +433,29 @@ class Appeal(Base):
     
     # Relationships
     application = orm_relationship("LoanApplication", back_populates="appeal")
+
+
+class ChatHistory(Base):
+    """
+    Persistent chat history for borrower chatbot interactions.
+    """
+    __tablename__ = "chat_history"
+    __table_args__ = (
+        Index('idx_chat_history_application_id', 'application_id'),
+        Index('idx_chat_history_created_at', 'created_at'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    application_id = Column(UUID(as_uuid=True), ForeignKey('loan_applications.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+
+    sender = Column(String(20), nullable=False)  # user | assistant
+    message = Column(Text, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    application = orm_relationship("LoanApplication", back_populates="chat_messages")
 
 
 # ─── AUDIT AND MONITORING MODELS ───────────────────────────────────────────

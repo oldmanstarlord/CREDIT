@@ -8,6 +8,7 @@ loan application process, and ways to improve eligibility.
 from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import uuid
 from sqlalchemy.orm import Session
 import logging
 import os
@@ -15,13 +16,11 @@ import os
 from app.core.database import get_db
 from app.core.security import get_current_user, TokenData
 from app.services.chatbot_service import ChatbotService
-from app.models.models import LoanApplication
+from app.models.models import LoanApplication, ChatHistory
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
-
-_CHAT_MEMORY: Dict[str, List[Dict[str, str]]] = {}
 
 
 def get_chatbot_service():
@@ -65,9 +64,11 @@ def send_chat_message(
         
         # Build optional application context
         if application_id:
+            app_id = uuid.UUID(application_id)
+            user_id = uuid.UUID(current_user.user_id)
             app = db.query(LoanApplication).filter(
-                LoanApplication.id == application_id,
-                LoanApplication.user_id == current_user.sub
+                LoanApplication.id == app_id,
+                LoanApplication.user_id == user_id
             ).first()
             
             if not app:
@@ -76,8 +77,18 @@ def send_chat_message(
                     detail="Application not found or access denied"
                 )
             
-            # Read in-memory conversation (fallback when ChatHistory table is not present)
-            conversation = _CHAT_MEMORY.get(str(application_id), [])[-10:]
+            # Read persisted conversation
+            chat_history = db.query(ChatHistory).filter(
+                ChatHistory.application_id == app_id,
+                ChatHistory.user_id == user_id
+            ).order_by(ChatHistory.created_at.asc()).all()
+            conversation = [
+                {
+                    'role': ch.sender,
+                    'content': ch.message
+                }
+                for ch in chat_history[-10:]
+            ]
             
             # Prepare user context
             user_context = {
@@ -104,9 +115,27 @@ def send_chat_message(
         # Get suggestions
         suggestions = chatbot.suggest_next_actions(user_context)
         
-        # Store in in-memory history if application_id provided
+        # Store in persistent history if application_id provided
         if application_id:
-            _CHAT_MEMORY[str(application_id)] = updated_conversation[-20:]
+            app_id = uuid.UUID(application_id)
+            user_id = uuid.UUID(current_user.user_id)
+            db.add(
+                ChatHistory(
+                    application_id=app_id,
+                    user_id=user_id,
+                    sender='user',
+                    message=message,
+                )
+            )
+            db.add(
+                ChatHistory(
+                    application_id=app_id,
+                    user_id=user_id,
+                    sender='assistant',
+                    message=response_text,
+                )
+            )
+            db.commit()
         
         # Confidence score based on message length and context richness
         confidence = min(
@@ -142,9 +171,11 @@ def get_chat_history(
     """Get chat history for application"""
     try:
         # Verify ownership
+        app_id = uuid.UUID(application_id)
+        user_id = uuid.UUID(current_user.user_id)
         app = db.query(LoanApplication).filter(
-            LoanApplication.id == application_id,
-            LoanApplication.user_id == current_user.sub
+            LoanApplication.id == app_id,
+            LoanApplication.user_id == user_id
         ).first()
         
         if not app:
@@ -153,19 +184,22 @@ def get_chat_history(
                 detail="Access denied"
             )
         
-        chats = _CHAT_MEMORY.get(str(application_id), [])[-limit:]
+        chats = db.query(ChatHistory).filter(
+            ChatHistory.application_id == app_id,
+            ChatHistory.user_id == user_id
+        ).order_by(ChatHistory.created_at.desc()).limit(limit).all()
 
         return {
             'application_id': application_id,
             'message_count': len(chats),
             'messages': [
                 {
-                    'id': str(idx + 1),
-                    'sender': chat.get('role', 'assistant'),
-                    'message': chat.get('content', ''),
-                    'timestamp': datetime.utcnow().isoformat()
+                    'id': str(chat.id),
+                    'sender': chat.sender,
+                    'message': chat.message,
+                    'timestamp': chat.created_at.isoformat()
                 }
-                for idx, chat in enumerate(chats)
+                for chat in reversed(chats)
             ]
         }
     except HTTPException:
@@ -187,9 +221,11 @@ def clear_chat_history(
     """Clear chat history (user can delete their own conversation)"""
     try:
         # Verify ownership
+        app_id = uuid.UUID(application_id)
+        user_id = uuid.UUID(current_user.user_id)
         app = db.query(LoanApplication).filter(
-            LoanApplication.id == application_id,
-            LoanApplication.user_id == current_user.sub
+            LoanApplication.id == app_id,
+            LoanApplication.user_id == user_id
         ).first()
         
         if not app:
@@ -198,13 +234,17 @@ def clear_chat_history(
                 detail="Access denied"
             )
         
-        # Delete in-memory history
-        _CHAT_MEMORY.pop(str(application_id), None)
+        db.query(ChatHistory).filter(
+            ChatHistory.application_id == app_id,
+            ChatHistory.user_id == user_id
+        ).delete(synchronize_session=False)
+        db.commit()
         
         return {'status': 'success', 'message': 'Chat history cleared'}
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         logger.error(f"Error clearing chat history: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
