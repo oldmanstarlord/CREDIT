@@ -15,11 +15,13 @@ import os
 from app.core.database import get_db
 from app.core.security import get_current_user, TokenData
 from app.services.chatbot_service import ChatbotService
-from app.models.models import LoanApplication, ChatHistory
+from app.models.models import LoanApplication
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+_CHAT_MEMORY: Dict[str, List[Dict[str, str]]] = {}
 
 
 def get_chatbot_service():
@@ -61,7 +63,7 @@ def send_chat_message(
                 detail="Message too long (max 1000 characters)"
             )
         
-        # Get or create chat history
+        # Build optional application context
         if application_id:
             app = db.query(LoanApplication).filter(
                 LoanApplication.id == application_id,
@@ -74,27 +76,16 @@ def send_chat_message(
                     detail="Application not found or access denied"
                 )
             
-            # Get existing chat history
-            chat_history = db.query(ChatHistory).filter(
-                ChatHistory.application_id == application_id
-            ).order_by(ChatHistory.created_at).all()
-            
-            # Convert to OpenAI format
-            conversation = [
-                {
-                    'role': 'user' if ch.sender == 'user' else 'assistant',
-                    'content': ch.message
-                }
-                for ch in chat_history[-10:]  # Last 10 messages only
-            ]
+            # Read in-memory conversation (fallback when ChatHistory table is not present)
+            conversation = _CHAT_MEMORY.get(str(application_id), [])[-10:]
             
             # Prepare user context
             user_context = {
                 'user_category': app.user_category,
                 'credit_score': app.credit_score or 500,
                 'application_status': app.final_decision or 'submitted',
-                'top_positive_factors': app.top_positive_factors or [],
-                'top_negative_factors': app.top_negative_factors or []
+                'top_positive_factors': getattr(app, 'top_positive_factors', []) or [],
+                'top_negative_factors': getattr(app, 'top_negative_factors', []) or []
             }
         else:
             # No application context
@@ -113,24 +104,9 @@ def send_chat_message(
         # Get suggestions
         suggestions = chatbot.suggest_next_actions(user_context)
         
-        # Store in database if application_id provided
+        # Store in in-memory history if application_id provided
         if application_id:
-            # Store user message
-            user_chat = ChatHistory(
-                application_id=application_id,
-                sender='user',
-                message=message
-            )
-            db.add(user_chat)
-            
-            # Store bot response
-            bot_chat = ChatHistory(
-                application_id=application_id,
-                sender='assistant',
-                message=response_text
-            )
-            db.add(bot_chat)
-            db.commit()
+            _CHAT_MEMORY[str(application_id)] = updated_conversation[-20:]
         
         # Confidence score based on message length and context richness
         confidence = min(
@@ -177,22 +153,19 @@ def get_chat_history(
                 detail="Access denied"
             )
         
-        # Get chat history
-        chats = db.query(ChatHistory).filter(
-            ChatHistory.application_id == application_id
-        ).order_by(ChatHistory.created_at.desc()).limit(limit).all()
-        
+        chats = _CHAT_MEMORY.get(str(application_id), [])[-limit:]
+
         return {
             'application_id': application_id,
             'message_count': len(chats),
             'messages': [
                 {
-                    'id': str(chat.id),
-                    'sender': chat.sender,
-                    'message': chat.message,
-                    'timestamp': chat.created_at.isoformat()
+                    'id': str(idx + 1),
+                    'sender': chat.get('role', 'assistant'),
+                    'message': chat.get('content', ''),
+                    'timestamp': datetime.utcnow().isoformat()
                 }
-                for chat in reversed(chats)  # Reverse to show chronological order
+                for idx, chat in enumerate(chats)
             ]
         }
     except HTTPException:
@@ -225,18 +198,13 @@ def clear_chat_history(
                 detail="Access denied"
             )
         
-        # Delete all chats
-        db.query(ChatHistory).filter(
-            ChatHistory.application_id == application_id
-        ).delete()
-        
-        db.commit()
+        # Delete in-memory history
+        _CHAT_MEMORY.pop(str(application_id), None)
         
         return {'status': 'success', 'message': 'Chat history cleared'}
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
         logger.error(f"Error clearing chat history: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
