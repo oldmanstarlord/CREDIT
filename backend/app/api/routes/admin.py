@@ -16,7 +16,6 @@ from sqlalchemy import and_, func, desc
 from app.core.database import get_db
 from app.core.security import get_current_user, TokenData
 from app.models.models import LoanApplication, AuditLog
-from app.schemas import PaginationParams
 from app.services.audit_service import AuditService
 from app.services.policy_engine import PolicyEngine
 from app.services.fairness_service import FairnessMonitor
