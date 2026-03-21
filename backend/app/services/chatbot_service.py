@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import logging
 import json
 from datetime import datetime
+import importlib
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,20 @@ class ChatbotService:
         self.api_key = api_key
         self.model = model
         self.client = None
+        self._openai_mode = None
         
         if api_key:
             try:
-                import openai
-                openai.api_key = api_key
-                self.client = openai
+                try:
+                    openai_pkg = importlib.import_module("openai")
+                    OpenAI = getattr(openai_pkg, "OpenAI")
+                    self.client = OpenAI(api_key=api_key)
+                    self._openai_mode = "v1"
+                except Exception:
+                    openai = importlib.import_module("openai")
+                    openai.api_key = api_key
+                    self.client = openai
+                    self._openai_mode = "legacy"
                 logger.info(f"OpenAI client initialized (model: {model})")
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI: {e}")
@@ -130,19 +139,32 @@ When a user seems distressed about their decision, offer:
         try:
             system_prompt = self.generate_system_prompt(user_context)
             
-            # Call OpenAI API
-            response = self.client.ChatCompletion.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    *conversation_history
-                ],
-                temperature=0.7,
-                max_tokens=500,
-                top_p=0.9
-            )
-            
-            assistant_message = response.choices[0].message.content
+            messages = [
+                {"role": "system", "content": system_prompt},
+                *conversation_history
+            ]
+
+            if self._openai_mode == "v1":
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=500,
+                    top_p=0.9,
+                )
+                assistant_message = (response.choices[0].message.content or "").strip()
+                total_tokens = getattr(response.usage, "total_tokens", None)
+            else:
+                response = self.client.ChatCompletion.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=500,
+                    top_p=0.9,
+                )
+                assistant_message = (response.choices[0].message.content or "").strip()
+                usage = getattr(response, "usage", None)
+                total_tokens = getattr(usage, "total_tokens", None) if usage else None
             
             # Add assistant response to history
             conversation_history.append({
@@ -154,7 +176,7 @@ When a user seems distressed about their decision, offer:
             if len(conversation_history) > 20:
                 conversation_history = conversation_history[-20:]
             
-            logger.info(f"Chat response generated (tokens: {response.usage.total_tokens})")
+            logger.info(f"Chat response generated (tokens: {total_tokens})")
             
             return assistant_message, conversation_history
         
