@@ -122,9 +122,14 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    applications = orm_relationship("LoanApplication", back_populates="user", cascade="all, delete-orphan")
+    applications = orm_relationship(
+        "LoanApplication",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="LoanApplication.user_id",
+    )
     documents = orm_relationship("Document", back_populates="user", cascade="all, delete-orphan")
-    audit_logs = orm_relationship("AuditLog", back_populates="user")
+    audit_logs = orm_relationship("AuditLog", back_populates="user", foreign_keys="AuditLog.user_id")
 
 
 class AdminUser(Base):
@@ -220,7 +225,7 @@ class LoanApplication(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = orm_relationship("User", back_populates="applications")
+    user = orm_relationship("User", back_populates="applications", foreign_keys=[user_id])
     category_specific_data = orm_relationship("CategorySpecificData", back_populates="application", 
                                          cascade="all, delete-orphan", uselist=False)
     nominee = orm_relationship("Nominee", back_populates="application", cascade="all, delete-orphan", 
