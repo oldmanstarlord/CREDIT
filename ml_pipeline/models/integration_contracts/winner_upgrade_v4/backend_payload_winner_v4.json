@@ -1,0 +1,151 @@
+{
+  "run_id": "20260320_211341",
+  "threshold": 0.7300000000000002,
+  "threshold_note": "Threshold meets accuracy/recall/reject constraints.",
+  "metrics_v4": {
+    "threshold_note": "Threshold meets accuracy/recall/reject constraints.",
+    "threshold": 0.7300000000000002,
+    "auc_roc": 0.7640522458846353,
+    "pr_auc": 0.2947731933189087,
+    "brier": 0.22481431388016185,
+    "accuracy": 0.8484355688544851,
+    "precision": 0.30641648517339587,
+    "recall": 0.3908954904894208,
+    "f1": 0.3435386927122464
+  },
+  "model_comparison": [
+    {
+      "model": "winner_v2",
+      "auc_roc": 0.7623490931509472,
+      "pr_auc": 0.2921366247651866,
+      "accuracy": 0.7787246037424922,
+      "recall": 0.5627270784355631,
+      "f1": 0.3403787731885463
+    },
+    {
+      "model": "winner_v3_segmented",
+      "auc_roc": 0.7642193648859069,
+      "pr_auc": 0.296469208830476,
+      "accuracy": 0.8307855764435482,
+      "recall": 0.4406924556529173,
+      "f1": 0.3457411133467472
+    },
+    {
+      "model": "winner_v4_user_specific",
+      "auc_roc": 0.7640522458846353,
+      "pr_auc": 0.2947731933189087,
+      "accuracy": 0.8484355688544851,
+      "recall": 0.3908954904894208,
+      "f1": 0.3435386927122464
+    }
+  ],
+  "segment_summary": [
+    {
+      "segment": "msme_owner",
+      "count": 84119
+    },
+    {
+      "segment": "daily_wage_worker",
+      "count": 75116
+    },
+    {
+      "segment": "gig_worker",
+      "count": 62796
+    },
+    {
+      "segment": "low_income_salaried",
+      "count": 46452
+    },
+    {
+      "segment": "homemaker",
+      "count": 36574
+    },
+    {
+      "segment": "farmer",
+      "count": 2454
+    }
+  ],
+  "segment_kpis": [
+    {
+      "segment": "msme_owner",
+      "count": 14642,
+      "default_rate": 0.08154623685288895,
+      "auc_roc": 0.7609875111727585,
+      "pr_auc": 0.25370257524343814,
+      "accuracy": 0.881915038929108,
+      "precision": 0.29052466718872355,
+      "recall": 0.31072026800670016,
+      "f1": 0.3002832861189802,
+      "approve_rate": 0.912785138642262
+    },
+    {
+      "segment": "daily_wage_worker",
+      "count": 12309,
+      "default_rate": 0.12527418961735315,
+      "auc_roc": 0.7621517180865731,
+      "pr_auc": 0.33080651462584243,
+      "accuracy": 0.8041270614997157,
+      "precision": 0.31214872460008647,
+      "recall": 0.4682230869001297,
+      "f1": 0.37457846952010376,
+      "approve_rate": 0.8120887155739702
+    },
+    {
+      "segment": "gig_worker",
+      "count": 11711,
+      "default_rate": 0.11075057638118009,
+      "auc_roc": 0.7579023344856777,
+      "pr_auc": 0.3034790729015406,
+      "accuracy": 0.8317820852190249,
+      "precision": 0.3073840870062965,
+      "recall": 0.41403238242097146,
+      "f1": 0.3528252299605782,
+      "approve_rate": 0.8508240116130134
+    },
+    {
+      "segment": "low_income_salaried",
+      "count": 5370,
+      "default_rate": 0.0845437616387337,
+      "auc_roc": 0.7510737661434568,
+      "pr_auc": 0.25231335569962254,
+      "accuracy": 0.8806331471135941,
+      "precision": 0.2989247311827957,
+      "recall": 0.30616740088105726,
+      "f1": 0.3025027203482046,
+      "approve_rate": 0.9134078212290503
+    },
+    {
+      "segment": "homemaker",
+      "count": 1705,
+      "default_rate": 0.0873900293255132,
+      "auc_roc": 0.7475587032659892,
+      "pr_auc": 0.27499863034012,
+      "accuracy": 0.893841642228739,
+      "precision": 0.3644067796610169,
+      "recall": 0.28859060402684567,
+      "f1": 0.32209737827715357,
+      "approve_rate": 0.930791788856305
+    },
+    {
+      "segment": "farmer",
+      "count": 382,
+      "default_rate": 0.112565445026178,
+      "auc_roc": 0.7867188035947039,
+      "pr_auc": 0.3617061205453893,
+      "accuracy": 0.8481675392670157,
+      "precision": 0.3469387755102041,
+      "recall": 0.3953488372093023,
+      "f1": 0.3695652173913043,
+      "approve_rate": 0.8717277486910995
+    }
+  ],
+  "segment_emi_caps": {
+    "farmer": 0.3,
+    "daily_wage_worker": 0.25,
+    "gig_worker": 0.35,
+    "msme_owner": 0.4,
+    "homemaker": 0.22,
+    "low_income_salaried": 0.4
+  },
+  "nominee_logic_scope": "all_segments"
+}

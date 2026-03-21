@@ -1,0 +1,24 @@
+{
+  "kpis": [
+    {
+      "label": "Champion AUC",
+      "value": 0.8625
+    },
+    {
+      "label": "Champion F1",
+      "value": 0.4324
+    },
+    {
+      "label": "Expected Loss",
+      "value": 76558506.58
+    },
+    {
+      "label": "VaR 95%",
+      "value": 84077149.73
+    }
+  ],
+  "risk_flags": {
+    "high_drift_feature_count": 0,
+    "stress_auc_p05": 0.8588
+  }
+}

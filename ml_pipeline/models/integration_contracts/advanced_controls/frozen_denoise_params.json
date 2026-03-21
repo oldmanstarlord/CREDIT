@@ -1,0 +1,777 @@
+{
+  "winsor_params": {
+    "CNT_CHILDREN": {
+      "q01": 0.0,
+      "q99": 3.0
+    },
+    "AMT_INCOME_TOTAL": {
+      "q01": 45000.0,
+      "q99": 450000.0
+    },
+    "AMT_CREDIT": {
+      "q01": 76410.0,
+      "q99": 1865905.1100000096
+    },
+    "AMT_ANNUITY": {
+      "q01": 6066.0,
+      "q99": 70092.36000000034
+    },
+    "AMT_GOODS_PRICE": {
+      "q01": 67500.0,
+      "q99": 1800000.0
+    },
+    "REGION_POPULATION_RELATIVE": {
+      "q01": 0.002134,
+      "q99": 0.072508
+    },
+    "DAYS_BIRTH": {
+      "q01": -24580.0,
+      "q99": -9686.0
+    },
+    "DAYS_EMPLOYED": {
+      "q01": -11500.0,
+      "q99": 365243.0
+    },
+    "DAYS_REGISTRATION": {
+      "q01": -14167.0,
+      "q99": -57.0
+    },
+    "DAYS_ID_PUBLISH": {
+      "q01": -5567.0,
+      "q99": -2089.0
+    },
+    "OWN_CAR_AGE": {
+      "q01": 0.0,
+      "q99": 43.0
+    },
+    "FLAG_MOBIL": {
+      "q01": 1.0,
+      "q99": 1.0
+    },
+    "FLAG_EMP_PHONE": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_WORK_PHONE": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_CONT_MOBILE": {
+      "q01": 1.0,
+      "q99": 1.0
+    },
+    "FLAG_PHONE": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_EMAIL": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "CNT_FAM_MEMBERS": {
+      "q01": 1.0,
+      "q99": 5.0
+    },
+    "REGION_RATING_CLIENT": {
+      "q01": 1.0,
+      "q99": 3.0
+    },
+    "REGION_RATING_CLIENT_W_CITY": {
+      "q01": 1.0,
+      "q99": 3.0
+    },
+    "HOUR_APPR_PROCESS_START": {
+      "q01": 4.0,
+      "q99": 19.0
+    },
+    "REG_REGION_NOT_LIVE_REGION": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "REG_REGION_NOT_WORK_REGION": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "LIVE_REGION_NOT_WORK_REGION": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "REG_CITY_NOT_LIVE_CITY": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "REG_CITY_NOT_WORK_CITY": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "LIVE_CITY_NOT_WORK_CITY": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "EXT_SOURCE_1": {
+      "q01": 0.12881516176687494,
+      "q99": 0.8716922700379296
+    },
+    "EXT_SOURCE_2": {
+      "q01": 0.0335213315480106,
+      "q99": 0.7837959958141865
+    },
+    "EXT_SOURCE_3": {
+      "q01": 0.0790596959945767,
+      "q99": 0.8327850252992314
+    },
+    "APARTMENTS_AVG": {
+      "q01": 0.0052,
+      "q99": 0.4412
+    },
+    "BASEMENTAREA_AVG": {
+      "q01": 0.0,
+      "q99": 0.2952
+    },
+    "YEARS_BEGINEXPLUATATION_AVG": {
+      "q01": 0.9578,
+      "q99": 0.998
+    },
+    "YEARS_BUILD_AVG": {
+      "q01": 0.5512,
+      "q99": 0.966
+    },
+    "COMMONAREA_AVG": {
+      "q01": 0.0,
+      "q99": 0.2022
+    },
+    "ELEVATORS_AVG": {
+      "q01": 0.0,
+      "q99": 0.48
+    },
+    "ENTRANCES_AVG": {
+      "q01": 0.0345,
+      "q99": 0.4138
+    },
+    "FLOORSMAX_AVG": {
+      "q01": 0.0417,
+      "q99": 0.625
+    },
+    "FLOORSMIN_AVG": {
+      "q01": 0.0417,
+      "q99": 0.625
+    },
+    "LANDAREA_AVG": {
+      "q01": 0.0,
+      "q99": 0.2680520000000019
+    },
+    "LIVINGAPARTMENTS_AVG": {
+      "q01": 0.0067,
+      "q99": 0.3204340000000084
+    },
+    "LIVINGAREA_AVG": {
+      "q01": 0.0042,
+      "q99": 0.4453
+    },
+    "NONLIVINGAPARTMENTS_AVG": {
+      "q01": 0.0,
+      "q99": 0.0386
+    },
+    "NONLIVINGAREA_AVG": {
+      "q01": 0.0,
+      "q99": 0.2088
+    },
+    "APARTMENTS_MODE": {
+      "q01": 0.0042,
+      "q99": 0.4370000000000001
+    },
+    "BASEMENTAREA_MODE": {
+      "q01": 0.0,
+      "q99": 0.30212600000000095
+    },
+    "YEARS_BEGINEXPLUATATION_MODE": {
+      "q01": 0.9568,
+      "q99": 0.998
+    },
+    "YEARS_BUILD_MODE": {
+      "q01": 0.5622,
+      "q99": 0.9673
+    },
+    "COMMONAREA_MODE": {
+      "q01": 0.0,
+      "q99": 0.1966
+    },
+    "ELEVATORS_MODE": {
+      "q01": 0.0,
+      "q99": 0.4834
+    },
+    "ENTRANCES_MODE": {
+      "q01": 0.0345,
+      "q99": 0.4138
+    },
+    "FLOORSMAX_MODE": {
+      "q01": 0.0,
+      "q99": 0.625
+    },
+    "FLOORSMIN_MODE": {
+      "q01": 0.0417,
+      "q99": 0.5833
+    },
+    "LANDAREA_MODE": {
+      "q01": 0.0,
+      "q99": 0.2702
+    },
+    "LIVINGAPARTMENTS_MODE": {
+      "q01": 0.0073,
+      "q99": 0.3444
+    },
+    "LIVINGAREA_MODE": {
+      "q01": 0.0036,
+      "q99": 0.4545
+    },
+    "NONLIVINGAPARTMENTS_MODE": {
+      "q01": 0.0,
+      "q99": 0.0389
+    },
+    "NONLIVINGAREA_MODE": {
+      "q01": 0.0,
+      "q99": 0.2103
+    },
+    "APARTMENTS_MEDI": {
+      "q01": 0.0042,
+      "q99": 0.4455
+    },
+    "BASEMENTAREA_MEDI": {
+      "q01": 0.0,
+      "q99": 0.2949260000000009
+    },
+    "YEARS_BEGINEXPLUATATION_MEDI": {
+      "q01": 0.9578,
+      "q99": 0.998
+    },
+    "YEARS_BUILD_MEDI": {
+      "q01": 0.5572,
+      "q99": 0.9665
+    },
+    "COMMONAREA_MEDI": {
+      "q01": 0.0,
+      "q99": 0.2036
+    },
+    "ELEVATORS_MEDI": {
+      "q01": 0.0,
+      "q99": 0.48
+    },
+    "ENTRANCES_MEDI": {
+      "q01": 0.0345,
+      "q99": 0.4138
+    },
+    "FLOORSMAX_MEDI": {
+      "q01": 0.0417,
+      "q99": 0.625
+    },
+    "FLOORSMIN_MEDI": {
+      "q01": 0.0417,
+      "q99": 0.625
+    },
+    "LANDAREA_MEDI": {
+      "q01": 0.0,
+      "q99": 0.2723260000000009
+    },
+    "LIVINGAPARTMENTS_MEDI": {
+      "q01": 0.0068,
+      "q99": 0.3266
+    },
+    "LIVINGAREA_MEDI": {
+      "q01": 0.0042,
+      "q99": 0.45282600000000095
+    },
+    "NONLIVINGAPARTMENTS_MEDI": {
+      "q01": 0.0,
+      "q99": 0.0388
+    },
+    "NONLIVINGAREA_MEDI": {
+      "q01": 0.0,
+      "q99": 0.2115
+    },
+    "TOTALAREA_MODE": {
+      "q01": 0.0027,
+      "q99": 0.438
+    },
+    "OBS_30_CNT_SOCIAL_CIRCLE": {
+      "q01": 0.0,
+      "q99": 10.0
+    },
+    "DEF_30_CNT_SOCIAL_CIRCLE": {
+      "q01": 0.0,
+      "q99": 2.0
+    },
+    "OBS_60_CNT_SOCIAL_CIRCLE": {
+      "q01": 0.0,
+      "q99": 10.0
+    },
+    "DEF_60_CNT_SOCIAL_CIRCLE": {
+      "q01": 0.0,
+      "q99": 2.0
+    },
+    "DAYS_LAST_PHONE_CHANGE": {
+      "q01": -3170.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_2": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_3": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_DOCUMENT_4": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_5": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_DOCUMENT_6": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_DOCUMENT_7": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_8": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "FLAG_DOCUMENT_9": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_10": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_11": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_12": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_13": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_14": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_15": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_16": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_17": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_18": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_19": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_20": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "FLAG_DOCUMENT_21": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "AMT_REQ_CREDIT_BUREAU_HOUR": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "AMT_REQ_CREDIT_BUREAU_DAY": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "AMT_REQ_CREDIT_BUREAU_WEEK": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "AMT_REQ_CREDIT_BUREAU_MON": {
+      "q01": 0.0,
+      "q99": 4.0
+    },
+    "AMT_REQ_CREDIT_BUREAU_QRT": {
+      "q01": 0.0,
+      "q99": 2.0
+    },
+    "AMT_REQ_CREDIT_BUREAU_YEAR": {
+      "q01": 0.0,
+      "q99": 8.0
+    },
+    "age_years": {
+      "q01": 26.5,
+      "q99": 67.3
+    },
+    "employment_years": {
+      "q01": 0.0,
+      "q99": 31.506849315068493
+    },
+    "is_employed": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "has_ext_source_1": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "has_ext_source_2": {
+      "q01": 1.0,
+      "q99": 1.0
+    },
+    "has_ext_source_3": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "ext_source_count": {
+      "q01": 1.0,
+      "q99": 3.0
+    },
+    "total_documents_provided": {
+      "q01": 0.0,
+      "q99": 2.0
+    },
+    "credit_to_income_ratio": {
+      "q01": 0.5876476623314564,
+      "q99": 13.211060181030561
+    },
+    "annuity_to_income_ratio": {
+      "q01": 0.47365097186162375,
+      "q99": 5.846700733170406
+    },
+    "credit_to_goods_ratio": {
+      "q01": 0.9999920635550511,
+      "q99": 1.475186887227669
+    },
+    "income_per_family_member": {
+      "q01": 13500.0,
+      "q99": 180000.0
+    },
+    "ext_source_mean": {
+      "q01": 0.24521735908734674,
+      "q99": 0.7388725134020612
+    },
+    "ext_source_min": {
+      "q01": 0.023062120492899518,
+      "q99": 0.6722428897082422
+    },
+    "ext_source_product": {
+      "q01": 0.0029994936071281357,
+      "q99": 0.3960350634321225
+    },
+    "social_risk_composite": {
+      "q01": 0.0,
+      "q99": 0.5
+    },
+    "address_instability_score": {
+      "q01": 0.0,
+      "q99": 3.0
+    },
+    "enquiry_last_month": {
+      "q01": 0.0,
+      "q99": 4.0
+    },
+    "enquiry_last_year": {
+      "q01": 0.0,
+      "q99": 8.0
+    },
+    "enquiry_acceleration": {
+      "q01": 0.0,
+      "q99": 3.4285714285714284
+    },
+    "contact_score": {
+      "q01": 0.5,
+      "q99": 1.0
+    },
+    "employment_to_age_ratio": {
+      "q01": 0.0,
+      "q99": 0.5661402860273685
+    },
+    "days_since_phone_change": {
+      "q01": -0.0,
+      "q99": 3170.0
+    },
+    "recently_changed_phone": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "installment_count": {
+      "q01": 0.0,
+      "q99": 187.0
+    },
+    "total_paid": {
+      "q01": 0.0,
+      "q99": 4325301.128700001
+    },
+    "avg_payment_ratio": {
+      "q01": 0.0,
+      "q99": 2.0408762133264506
+    },
+    "min_payment_ratio": {
+      "q01": 0.0,
+      "q99": 0.9999726390728209
+    },
+    "late_payment_count": {
+      "q01": 0.0,
+      "q99": 30.0
+    },
+    "avg_days_late": {
+      "q01": 0.0,
+      "q99": 96.0
+    },
+    "early_payment_count": {
+      "q01": 0.0,
+      "q99": 116.0
+    },
+    "max_days_late": {
+      "q01": -19.0,
+      "q99": 357.0
+    },
+    "late_payment_rate": {
+      "q01": 0.0,
+      "q99": 0.4630803974706456
+    },
+    "early_payment_rate": {
+      "q01": 0.0,
+      "q99": 0.9777777777777777
+    },
+    "prev_app_count": {
+      "q01": 0.0,
+      "q99": 20.0
+    },
+    "prev_approved_count": {
+      "q01": 0.0,
+      "q99": 10.0
+    },
+    "prev_refused_count": {
+      "q01": 0.0,
+      "q99": 8.0
+    },
+    "prev_cancelled_count": {
+      "q01": 0.0,
+      "q99": 7.0
+    },
+    "avg_prev_credit": {
+      "q01": 0.0,
+      "q99": 777739.9950000026
+    },
+    "max_prev_credit": {
+      "q01": 0.0,
+      "q99": 2025000.0
+    },
+    "avg_prev_annuity": {
+      "q01": 0.0,
+      "q99": 49407.37191818192
+    },
+    "approval_rate": {
+      "q01": 0.0,
+      "q99": 0.875
+    },
+    "refusal_rate": {
+      "q01": 0.0,
+      "q99": 0.6
+    },
+    "credit_growth": {
+      "q01": 0.0,
+      "q99": 6.608275100444316
+    },
+    "bureau_count": {
+      "q01": 0.0,
+      "q99": 20.0
+    },
+    "bureau_active_ratio": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "bureau_days_credit_mean": {
+      "q01": -2648.0,
+      "q99": 0.0
+    },
+    "bureau_days_credit_enddate_mean": {
+      "q01": -2227.0,
+      "q99": 12109.43200000003
+    },
+    "bureau_overdue_sum": {
+      "q01": 0.0,
+      "q99": 9.0
+    },
+    "bureau_overdue_max": {
+      "q01": 0.0,
+      "q99": 9.0
+    },
+    "bureau_debt_mean": {
+      "q01": 0.0,
+      "q99": 1598798.7360000052
+    },
+    "bureau_day_overdue_max": {
+      "q01": 0.0,
+      "q99": 13.0
+    },
+    "bb_months_count": {
+      "q01": 0.0,
+      "q99": 560.0
+    },
+    "bb_status_0_rate": {
+      "q01": 0.0,
+      "q99": 0.9625
+    },
+    "bb_status_1plus_rate": {
+      "q01": 0.0,
+      "q99": 0.125
+    },
+    "bb_status_c_rate": {
+      "q01": 0.0,
+      "q99": 0.8695652173913043
+    },
+    "ccb_count": {
+      "q01": 0.0,
+      "q99": 96.0
+    },
+    "ccb_bal_mean": {
+      "q01": 0.0,
+      "q99": 338137.19167153933
+    },
+    "ccb_bal_max": {
+      "q01": 0.0,
+      "q99": 491153.98500000086
+    },
+    "ccb_drawings_mean": {
+      "q01": 0.0,
+      "q99": 64442.68920000038
+    },
+    "ccb_payment_mean": {
+      "q01": 0.0,
+      "q99": 47090.78131000004
+    },
+    "ccb_dpd_mean": {
+      "q01": 0.0,
+      "q99": 0.9230769230769231
+    },
+    "ccb_dpd_max": {
+      "q01": 0.0,
+      "q99": 28.0
+    },
+    "pos_count": {
+      "q01": 0.0,
+      "q99": 116.26000000000931
+    },
+    "pos_dpd_mean": {
+      "q01": 0.0,
+      "q99": 37.95375000000058
+    },
+    "pos_dpd_max": {
+      "q01": 0.0,
+      "q99": 300.0
+    },
+    "pos_dpd_def_mean": {
+      "q01": 0.0,
+      "q99": 1.3846153846153846
+    },
+    "pos_inst_future_mean": {
+      "q01": 0.0,
+      "q99": 32.05312918660289
+    },
+    "feat_farmer_land_value_proxy": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "feat_farmer_harvest_buffer": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "feat_farmer_seasonal_income_flag": {
+      "q01": 0.0,
+      "q99": 0.0
+    },
+    "feat_daily_income_stability_proxy": {
+      "q01": 0.0,
+      "q99": 0.4496561833486516
+    },
+    "feat_daily_monthly_income_proxy": {
+      "q01": 0.0,
+      "q99": 24750.0
+    },
+    "feat_daily_emi_pressure": {
+      "q01": 0.0,
+      "q99": 4.224029436860068
+    },
+    "feat_gig_platform_trust_proxy": {
+      "q01": 0.0,
+      "q99": 0.9
+    },
+    "feat_gig_income_variability_proxy": {
+      "q01": 0.0,
+      "q99": 5.13406357223553
+    },
+    "feat_gig_activity_proxy": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "feat_msme_profitability_proxy": {
+      "q01": 0.0,
+      "q99": 0.5000013888850309
+    },
+    "feat_msme_growth_proxy": {
+      "q01": 0.0,
+      "q99": 4.999615899038839
+    },
+    "feat_msme_cashflow_proxy": {
+      "q01": 0.0,
+      "q99": 0.7
+    },
+    "feat_homemaker_household_income_proxy": {
+      "q01": 0.0,
+      "q99": 45000.0
+    },
+    "feat_homemaker_dependency_ratio": {
+      "q01": 0.0,
+      "q99": 1.415929203539823
+    },
+    "feat_homemaker_nominee_need": {
+      "q01": 0.0,
+      "q99": 1.0
+    },
+    "feat_salaried_regularity_proxy": {
+      "q01": 0.0,
+      "q99": 0.8503223695789911
+    },
+    "feat_salaried_bankability_proxy": {
+      "q01": 0.0,
+      "q99": 0.7086190906055129
+    },
+    "feat_nominee_recommended_all": {
+      "q01": 1.0,
+      "q99": 1.0
+    },
+    "feat_segment_emi_cap": {
+      "q01": 0.22,
+      "q99": 0.4
+    }
+  },
+  "log_columns": [
+    "AMT_INCOME_TOTAL",
+    "AMT_CREDIT",
+    "AMT_ANNUITY",
+    "AMT_GOODS_PRICE",
+    "credit_to_income_ratio",
+    "annuity_to_income_ratio",
+    "income_per_family_member"
+  ]
+}

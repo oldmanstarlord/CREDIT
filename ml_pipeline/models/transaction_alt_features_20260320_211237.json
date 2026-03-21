@@ -1,0 +1,17 @@
+{
+  "income_stability": 0.0,
+  "salary_regularity": 0.0,
+  "cash_flow_volatility": 0.848518324834875,
+  "balance_stress_indicator": 0.029876977152899824,
+  "savings_buffer_ratio": 0.09380562696684176,
+  "spending_pattern_ratio": 0.41957077911903995,
+  "transaction_consistency": 0.41340662828638897,
+  "utility_payment_proxy": 0.9948717948717949,
+  "avg_monthly_income": 6504.757692307693,
+  "avg_monthly_expense": 12387.274615384616,
+  "avg_running_balance": 2935.0440597539546,
+  "min_balance_ever": 0.15,
+  "total_salary_events": 0,
+  "food_spend_ratio": 0.11787158496464382,
+  "avg_txns_per_month": 43.76923076923077
+}

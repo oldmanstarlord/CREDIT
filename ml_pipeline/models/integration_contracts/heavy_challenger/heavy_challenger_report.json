@@ -1,0 +1,52 @@
+{
+  "baseline_auc": 0.7640522458846353,
+  "gates": {
+    "max_train_val_gap_auc": 0.03,
+    "max_val_test_drop_auc": 0.02
+  },
+  "ranking": [
+    {
+      "model": "catboost_heavy_regularized",
+      "train_auc": 0.8432975537270262,
+      "val_auc": 0.7711304102354021,
+      "test_auc": 0.7677124789889269,
+      "test_pr_auc": 0.29829360496782076,
+      "overfit_gap_auc": 0.07216714349162412,
+      "val_test_drop_auc": 0.0034179312464751588,
+      "safe_to_promote": false
+    },
+    {
+      "model": "xgb_heavy_regularized",
+      "train_auc": 0.9503706415795616,
+      "val_auc": 0.7694574900956299,
+      "test_auc": 0.7639449857491907,
+      "test_pr_auc": 0.29196630130715384,
+      "overfit_gap_auc": 0.18091315148393172,
+      "val_test_drop_auc": 0.00551250434643924,
+      "safe_to_promote": false
+    }
+  ],
+  "selected_model": "catboost_heavy_regularized",
+  "selection_note": "No challenger met all safety gates; top model shown for analysis only.",
+  "selected_test_metrics": {
+    "auc_roc": 0.7677124789889269,
+    "pr_auc": 0.29829360496782076,
+    "accuracy": 0.7823239879442312,
+    "precision": 0.24925149700598803,
+    "recall": 0.569352425731994,
+    "f1": 0.3467169909546431,
+    "threshold": 0.13
+  },
+  "selected_top10_feature_importance": {
+    "ext_source_mean": 8.465698,
+    "ext_source_product": 5.19922,
+    "pos_inst_future_mean": 3.480217,
+    "credit_to_goods_ratio": 3.16588,
+    "ext_source_min": 3.11095,
+    "EXT_SOURCE_2": 2.929762,
+    "AMT_ANNUITY": 2.430049,
+    "EXT_SOURCE_3": 2.392903,
+    "bureau_days_credit_mean": 2.387901,
+    "total_paid": 1.993307
+  }
+}

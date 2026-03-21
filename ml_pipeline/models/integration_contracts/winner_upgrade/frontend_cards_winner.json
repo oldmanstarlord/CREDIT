@@ -1,0 +1,25 @@
+{
+  "kpis": [
+    {
+      "label": "Core AUC",
+      "value": 0.7386
+    },
+    {
+      "label": "Fused AUC",
+      "value": 0.7386
+    },
+    {
+      "label": "Core PR-AUC",
+      "value": 0.2184
+    },
+    {
+      "label": "Fused PR-AUC",
+      "value": 0.2184
+    }
+  ],
+  "decisions": {
+    "approve_pct": 14.95,
+    "hold_pct": 77.99,
+    "reject_pct": 7.06
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "artifact_path": "/Users/shlokpalrecha/Desktop/Barclays/barclays-credit-platform/ml_pipeline/models/integration_contracts/winner_upgrade_v4/winner_v4_serving_artifact.pkl",
+  "winner_name": "winner_v4_user_specific",
+  "run_id": "20260320_211341",
+  "dataset_choice": "home_credit",
+  "n_features": 191,
+  "has_calibrator": true,
+  "has_feature_defaults": true
+}

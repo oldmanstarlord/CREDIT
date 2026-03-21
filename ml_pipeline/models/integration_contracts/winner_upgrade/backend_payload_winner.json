@@ -1,0 +1,31 @@
+{
+  "run_id": "20260320_211341",
+  "model": {
+    "name": "home_credit_core_fusion",
+    "core_threshold": 0.6599999999999997,
+    "auto_approve_pd": 0.15,
+    "auto_reject_pd": 0.65,
+    "metrics_core": {
+      "auc_roc": 0.7386064927015108,
+      "pr_auc": 0.21836682959087877,
+      "brier": 0.1646022486340118
+    },
+    "metrics_fused": {
+      "auc_roc": 0.7386064927015107,
+      "pr_auc": 0.21836682959087877,
+      "brier": 0.14137930696098477
+    }
+  },
+  "policy": {
+    "approve_share": 0.1495,
+    "hold_share": 0.7799375,
+    "reject_share": 0.0705625,
+    "expected_loss_proxy_avg": 723.2716875
+  },
+  "risk_enrichment": {
+    "behavior_risk_scalar": 0.3062784969806671,
+    "fraud_risk_scalar": 0.0005145,
+    "paysim_fraud_base": 0.000735,
+    "paysim_flagged_base": 0.0
+  }
+}

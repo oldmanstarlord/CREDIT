@@ -1,0 +1,28 @@
+{
+  "champion_model": "winner_v4_user_specific",
+  "shadow_rows": 46119,
+  "manual_review_rate": 0.0056809557882868235,
+  "insufficient_data_rate": 0.0,
+  "challenger_summary": [
+    {
+      "challenger_model": "monotonic_xgb",
+      "auc_roc": 0.7685844591500182,
+      "pr_auc": 0.29741642828645454,
+      "accuracy": 0.8990004119777099,
+      "recall": 0.008121393460141057,
+      "precision": 0.6909090909090909,
+      "decision_disagreement_rate_vs_champion": 0.004314924434614801,
+      "mean_pd_shift_vs_champion": 0.020073808636146464
+    },
+    {
+      "challenger_model": "weighted_noise_robust_xgb",
+      "auc_roc": 0.7676987990990716,
+      "pr_auc": 0.296461385732836,
+      "accuracy": 0.8988052646414709,
+      "recall": 0.004701859371660611,
+      "precision": 0.6875,
+      "decision_disagreement_rate_vs_champion": 0.0039029467247772066,
+      "mean_pd_shift_vs_champion": 0.020654175414414652
+    }
+  ]
+}
