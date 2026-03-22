@@ -37,6 +37,7 @@ class ChatbotService:
         base_url: Optional[str] = None,
         site_url: Optional[str] = None,
         app_name: Optional[str] = None,
+        fallback_models: Optional[List[str]] = None,
         temperature: float = 0.7,
         max_tokens: int = 500,
     ):
@@ -50,10 +51,13 @@ class ChatbotService:
         self.api_key = api_key
         self.model = model
         self.base_url = base_url
+        self.fallback_models = [m for m in (fallback_models or []) if m and m.strip()]
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.client = None
         self._openai_mode = None
+        self.last_model_used: Optional[str] = None
+        self.used_fallback_response: bool = False
         
         if api_key:
             try:
@@ -161,8 +165,12 @@ When a user seems distressed about their decision, offer:
             "role": "user",
             "content": user_message
         })
+
+        self.last_model_used = None
+        self.used_fallback_response = False
         
         if not self.client:
+            self.used_fallback_response = True
             return self._fallback_response(user_message, user_context), conversation_history
         
         try:
@@ -173,27 +181,46 @@ When a user seems distressed about their decision, offer:
                 *conversation_history
             ]
 
-            if self._openai_mode == "v1":
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    top_p=0.9,
-                )
-                assistant_message = (response.choices[0].message.content or "").strip()
-                total_tokens = getattr(response.usage, "total_tokens", None)
-            else:
-                response = self.client.ChatCompletion.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    top_p=0.9,
-                )
-                assistant_message = (response.choices[0].message.content or "").strip()
-                usage = getattr(response, "usage", None)
-                total_tokens = getattr(usage, "total_tokens", None) if usage else None
+            candidate_models = [self.model, *self.fallback_models]
+            # Keep order and remove duplicates.
+            candidate_models = list(dict.fromkeys(candidate_models))
+
+            assistant_message = ""
+            total_tokens = None
+            last_error = None
+
+            for model_name in candidate_models:
+                try:
+                    if self._openai_mode == "v1":
+                        response = self.client.chat.completions.create(
+                            model=model_name,
+                            messages=messages,
+                            temperature=self.temperature,
+                            max_tokens=self.max_tokens,
+                            top_p=0.9,
+                        )
+                        assistant_message = (response.choices[0].message.content or "").strip()
+                        total_tokens = getattr(response.usage, "total_tokens", None)
+                    else:
+                        response = self.client.ChatCompletion.create(
+                            model=model_name,
+                            messages=messages,
+                            temperature=self.temperature,
+                            max_tokens=self.max_tokens,
+                            top_p=0.9,
+                        )
+                        assistant_message = (response.choices[0].message.content or "").strip()
+                        usage = getattr(response, "usage", None)
+                        total_tokens = getattr(usage, "total_tokens", None) if usage else None
+
+                    self.last_model_used = model_name
+                    break
+                except Exception as model_error:
+                    last_error = model_error
+                    logger.warning(f"LLM call failed for model {model_name}: {model_error}")
+
+            if not self.last_model_used:
+                raise last_error or RuntimeError("No LLM model succeeded")
             
             # Add assistant response to history
             conversation_history.append({
@@ -211,6 +238,7 @@ When a user seems distressed about their decision, offer:
         
         except Exception as e:
             logger.error(f"Error calling LLM provider: {e}")
+            self.used_fallback_response = True
             fallback = self._fallback_response(user_message, user_context)
             conversation_history.append({
                 "role": "assistant",

@@ -194,6 +194,7 @@ class LoanApplication(Base):
     probability_of_default = Column(Float, nullable=True)  # 0.0 - 1.0
     credit_score = Column(Integer, nullable=True)  # 300 - 850
     risk_band = Column(Enum(RiskBand), nullable=True)
+    ml_scoring_result = Column(JSONB, default={})  # Full scorer output cached
     ml_model_version = Column(String(50), nullable=True)
     ml_scores_computed_at = Column(DateTime, nullable=True)
     

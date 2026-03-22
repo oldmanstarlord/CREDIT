@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.security import get_current_user, TokenData
 from app.services.chatbot_service import ChatbotService
 from app.models.models import LoanApplication, ChatHistory
+from app.schemas import ChatMessageRequest
 
 logger = logging.getLogger(__name__)
 
@@ -26,20 +27,60 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 def get_chatbot_service():
     """Dependency: Get initialized chatbot service with configured provider."""
     provider = (settings.LLM_PROVIDER or "openrouter").lower()
+    openrouter_key = (settings.OPENROUTER_API_KEY or "").strip()
+    openai_key = (settings.OPENAI_API_KEY or "").strip()
+    fallback_models = [
+        model.strip()
+        for model in (settings.OPENROUTER_FALLBACK_MODELS or "").split(",")
+        if model.strip()
+    ]
 
     if provider == "openrouter":
+        if not openrouter_key and openai_key:
+            logger.warning("LLM_PROVIDER=openrouter but OPENROUTER_API_KEY missing; falling back to OpenAI provider")
+            return ChatbotService(
+                api_key=openai_key,
+                model=settings.OPENAI_MODEL,
+                base_url=settings.OPENAI_BASE_URL,
+                temperature=settings.OPENAI_TEMPERATURE,
+                max_tokens=settings.OPENAI_MAX_TOKENS,
+            )
+        if not openrouter_key and not openai_key:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="LLM is not configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY and restart backend.",
+            )
         return ChatbotService(
-            api_key=settings.OPENROUTER_API_KEY or "",
+            api_key=openrouter_key,
             model=settings.OPENROUTER_MODEL,
             base_url=settings.OPENROUTER_BASE_URL,
             site_url=settings.OPENROUTER_SITE_URL,
             app_name=settings.OPENROUTER_APP_NAME,
+            fallback_models=fallback_models,
             temperature=settings.OPENAI_TEMPERATURE,
             max_tokens=settings.OPENAI_MAX_TOKENS,
         )
 
+    if not openai_key and openrouter_key:
+        logger.warning("LLM_PROVIDER=openai but OPENAI_API_KEY missing; falling back to OpenRouter provider")
+        return ChatbotService(
+            api_key=openrouter_key,
+            model=settings.OPENROUTER_MODEL,
+            base_url=settings.OPENROUTER_BASE_URL,
+            site_url=settings.OPENROUTER_SITE_URL,
+            app_name=settings.OPENROUTER_APP_NAME,
+            fallback_models=fallback_models,
+            temperature=settings.OPENAI_TEMPERATURE,
+            max_tokens=settings.OPENAI_MAX_TOKENS,
+        )
+    if not openai_key and not openrouter_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LLM is not configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY and restart backend.",
+        )
+
     return ChatbotService(
-        api_key=settings.OPENAI_API_KEY or "",
+        api_key=openai_key,
         model=settings.OPENAI_MODEL,
         base_url=settings.OPENAI_BASE_URL,
         temperature=settings.OPENAI_TEMPERATURE,
@@ -49,7 +90,8 @@ def get_chatbot_service():
 
 @router.post("/message")
 def send_chat_message(
-    message: str,
+    payload: Optional[ChatMessageRequest] = None,
+    message: Optional[str] = None,
     application_id: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
@@ -67,22 +109,25 @@ def send_chat_message(
         }
     """
     try:
+        resolved_message = payload.message if payload else message
+        resolved_application_id = payload.application_id if payload and payload.application_id is not None else application_id
+
         # Validate message
-        if not message or len(message.strip()) == 0:
+        if not resolved_message or len(resolved_message.strip()) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Message cannot be empty"
             )
         
-        if len(message) > 1000:
+        if len(resolved_message) > 1000:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Message too long (max 1000 characters)"
             )
         
         # Build optional application context
-        if application_id:
-            app_id = uuid.UUID(application_id)
+        if resolved_application_id:
+            app_id = uuid.UUID(resolved_application_id)
             user_id = uuid.UUID(current_user.user_id)
             app = db.query(LoanApplication).filter(
                 LoanApplication.id == app_id,
@@ -134,23 +179,23 @@ def send_chat_message(
             }
         
         # Get chatbot response
-        response_text, updated_conversation = chatbot.chat(
-            message, user_context, conversation
+        response_text, _updated_conversation = chatbot.chat(
+            resolved_message, user_context, conversation
         )
         
         # Get suggestions
         suggestions = chatbot.suggest_next_actions(user_context)
         
         # Store in persistent history if application_id provided
-        if application_id:
-            app_id = uuid.UUID(application_id)
+        if resolved_application_id:
+            app_id = uuid.UUID(resolved_application_id)
             user_id = uuid.UUID(current_user.user_id)
             db.add(
                 ChatHistory(
                     application_id=app_id,
                     user_id=user_id,
                     sender='user',
-                    message=message,
+                    message=resolved_message,
                 )
             )
             db.add(
@@ -173,7 +218,10 @@ def send_chat_message(
             'response': response_text,
             'confidence': round(confidence, 2),
             'suggestions': suggestions[:3],  # Top 3 suggestions
-            'application_id': application_id,
+            'application_id': resolved_application_id,
+            'llm_provider': settings.LLM_PROVIDER,
+            'llm_model': chatbot.last_model_used or 'rule_based_fallback',
+            'fallback_used': chatbot.used_fallback_response,
             'timestamp': datetime.utcnow().isoformat()
         }
     

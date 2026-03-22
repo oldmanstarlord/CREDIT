@@ -3,8 +3,8 @@ Pydantic schemas for request/response validation and documentation
 """
 
 from pydantic import BaseModel, Field, EmailStr, field_validator
-from typing import Optional, List, Dict, Any, Generic, TypeVar
-from datetime import datetime
+from typing import Optional, List, Dict, Any, Generic, TypeVar, Union
+from datetime import datetime, date, time
 from enum import Enum
 
 
@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     email: str
     phone_number: str
     full_name: str
+    role: Optional[str] = None
     date_of_birth: Optional[datetime] = None
     gender: Optional[str] = None
     aadhaar_number: Optional[str] = None
@@ -168,7 +169,7 @@ class LoanApplicationSubmitRequest(BaseModel):
     """Complete loan application submission"""
     # Step 1: Personal details
     full_name: str
-    date_of_birth: datetime
+    date_of_birth: Union[datetime, date]
     gender: Optional[str] = None
     phone_number: str
     email: EmailStr
@@ -187,6 +188,12 @@ class LoanApplicationSubmitRequest(BaseModel):
     requested_amount: int = Field(..., gt=0)
     requested_tenure_months: int = Field(..., gt=0)
     loan_purpose: Optional[str] = None
+
+    @field_validator('date_of_birth', mode='after')
+    def normalize_date_of_birth(cls, value):
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return datetime.combine(value, time.min)
+        return value
 
 
 class LoanApplicationResponse(BaseModel):
@@ -260,6 +267,14 @@ class WhatIfSimulatorResponse(BaseModel):
     adjusted_emi: Optional[int] = None
     score_change: int
     pd_change: float
+
+
+# ─── CHAT SCHEMAS ──────────────────────────────────────────────────────────
+
+class ChatMessageRequest(BaseModel):
+    """Chat message request payload."""
+    message: str = Field(..., min_length=1, max_length=1000)
+    application_id: Optional[str] = None
 
 
 # ─── ADMIN SCHEMAS ─────────────────────────────────────────────────────────

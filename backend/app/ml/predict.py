@@ -5,7 +5,7 @@ Loads trained model and generates credit decisions with SHAP explanations
 
 import logging
 import pickle
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 import json
 from pathlib import Path
 from datetime import datetime
@@ -14,10 +14,56 @@ import pandas as pd
 import xgboost as xgb
 
 from app.ml.feature_engineering import FeatureEngineer
-from app.core.config import settings
+from app.core.config import settings, PLATFORM_TRUST_SCORES
 from app.services.trust_service import TrustService
 
 logger = logging.getLogger(__name__)
+
+
+PILLAR_FEATURE_MAP = {
+    'income_stability': [
+        'AMT_INCOME_TOTAL',
+        'feat_daily_income_stability_proxy',
+        'feat_salaried_regularity_proxy',
+        'feat_farmer_seasonal_income_flag',
+        'feat_gig_income_variability_proxy',
+        'feat_daily_monthly_income_proxy',
+        'monthly_income',
+    ],
+    'repayment_capacity': [
+        'AMT_CREDIT',
+        'AMT_ANNUITY',
+        'annuity_to_income_ratio',
+        'credit_to_income_ratio',
+        'feat_daily_emi_pressure',
+        'feat_segment_emi_cap',
+        'debt_to_income_ratio',
+    ],
+    'spending_data': [
+        'feat_msme_profitability_proxy',
+        'feat_msme_cashflow_proxy',
+        'feat_gig_activity_proxy',
+    ],
+    'profile_completeness': [
+        'total_documents_provided',
+        'feat_salaried_bankability_proxy',
+        'CNT_FAM_MEMBERS',
+    ],
+    'alternative_data': [
+        'feat_gig_platform_trust_proxy',
+        'feat_farmer_land_value_proxy',
+        'feat_nominee_recommended_all',
+        'feat_homemaker_nominee_need',
+    ],
+}
+
+PILLAR_MAX_SCORES = {
+    'income_stability': 25,
+    'repayment_capacity': 30,
+    'spending_data': 15,
+    'profile_completeness': 10,
+    'alternative_data': 20,
+}
 
 
 class CreditScorer:
@@ -220,9 +266,18 @@ class CreditScorer:
         )
         X = pd.DataFrame([features_list], columns=feature_names)
         
-        # Get probability of default
-        scorer_obj = self.calibrator if self.calibrator is not None else self.model
-        pd_proba = float(scorer_obj.predict_proba(X)[0, 1])
+        # Get probability of default from the base model.
+        # Calibrator is optional and explicitly opt-in because serialized
+        # calibration objects are version-sensitive across sklearn releases.
+        base_pd_proba = float(self.model.predict_proba(X)[0, 1])
+        pd_proba = base_pd_proba
+        if self.calibrator is not None and settings.ML_USE_CALIBRATOR:
+            try:
+                calibrated = float(self.calibrator.predict_proba(X)[0, 1])
+                if np.isfinite(calibrated):
+                    pd_proba = calibrated
+            except Exception as e:
+                logger.warning("Calibrator failed, falling back to base model probability: %s", e)
 
         # Base score before trust adjustment (used for initial affordability estimate).
         base_credit_score = self._pd_to_credit_score(pd_proba)
@@ -260,14 +315,26 @@ class CreditScorer:
             credit_score, adjusted_pd, features_dict, application_data
         )
         
-        # Generate SHAP explanation
+        # Generate SHAP explanation (lazy-create TreeExplainer if not preloaded).
+        if self.shap_explainer is None and self.model is not None:
+            try:
+                import shap
+                self.shap_explainer = shap.TreeExplainer(self.model)
+            except Exception as e:
+                logger.warning(f"Could not create SHAP explainer: {e}")
+
         shap_explanation = self._explain_prediction(
             X, features_dict, application_data
         ) if self.shap_explainer else None
+
+        pillar_scores = self._compute_pillar_scores(
+            shap_explanation=shap_explanation,
+            probability_of_default=adjusted_pd,
+        )
         
         return {
             'probability_of_default': adjusted_pd,
-            'base_probability_of_default': pd_proba,
+            'base_probability_of_default': base_pd_proba,
             'credit_score': credit_score,
             'risk_band': risk_band,
             'segment_name': segment_name,
@@ -280,17 +347,72 @@ class CreditScorer:
             'ood_rate': decision_with_guardrails['ood_rate'],
             'loan_recommendation': loan_recommendation,
             'shap_explanation': shap_explanation,
+            'pillar_scores': pillar_scores,
             'trust_adjustment': trust_details,
             'model_version': self.winner_artifacts.get('winner_name', settings.ML_MODEL_VERSION),
             'features_computed': features_dict
         }
 
+    def _compute_pillar_scores(self, shap_explanation: Dict[str, Any], probability_of_default: float) -> Dict[str, int]:
+        """
+        Convert feature-level SHAP contributions into normalized 5-pillar scores.
+        Falls back to a PD heuristic if SHAP is unavailable.
+        """
+        if not shap_explanation or not isinstance(shap_explanation, dict):
+            pd_safe = min(max(float(probability_of_default or 0.5), 0.0), 1.0)
+            base_strength = max(0.0, 1.0 - pd_safe)
+            return {
+                'income_stability': int(round(PILLAR_MAX_SCORES['income_stability'] * base_strength * 0.95)),
+                'repayment_capacity': int(round(PILLAR_MAX_SCORES['repayment_capacity'] * base_strength)),
+                'spending_data': int(round(PILLAR_MAX_SCORES['spending_data'] * max(0.0, base_strength - 0.05))),
+                'profile_completeness': int(round(PILLAR_MAX_SCORES['profile_completeness'] * max(0.0, base_strength - 0.10))),
+                'alternative_data': int(round(PILLAR_MAX_SCORES['alternative_data'] * max(0.0, base_strength - 0.08))),
+            }
+
+        shap_values = shap_explanation.get('shap_values', {}) or {}
+        abs_map = {k: abs(float(v)) for k, v in shap_values.items()}
+
+        raw_totals = {}
+        for pillar, features in PILLAR_FEATURE_MAP.items():
+            raw_totals[pillar] = sum(abs_map.get(f, 0.0) for f in features)
+
+        total_signal = sum(raw_totals.values())
+        if total_signal <= 0:
+            # If SHAP exists but map overlap is empty, use flat neutral defaults.
+            return {
+                'income_stability': 12,
+                'repayment_capacity': 15,
+                'spending_data': 8,
+                'profile_completeness': 5,
+                'alternative_data': 10,
+            }
+
+        scores = {}
+        for pillar, max_score in PILLAR_MAX_SCORES.items():
+            normalized = raw_totals.get(pillar, 0.0) / total_signal
+            # Spread around mid-range so low-signal pillars are not always near zero.
+            blended = (0.35 + 0.65 * normalized)
+            scores[pillar] = int(round(min(max_score, max(0.0, blended * max_score))))
+
+        return scores
+
     def _build_winner_contract_features(self, application_data: Dict, feature_names) -> Dict:
         defaults = {k: float(v) for k, v in (self.model_feature_defaults or {}).items() if isinstance(v, (int, float))}
         out = {k: float(defaults.get(k, 0.0)) for k in feature_names}
 
-        monthly_income = float(application_data.get('monthly_income') or 0.0)
-        annual_income = float(application_data.get('annual_income_estimate') or (monthly_income * 12.0 if monthly_income > 0 else out.get('AMT_INCOME_TOTAL', 0.0)))
+        weekly_income = float(application_data.get('average_weekly_earnings') or 0.0)
+        monthly_income = float(
+            application_data.get('monthly_income')
+            or application_data.get('avg_monthly_income')
+            or application_data.get('monthly_salary_net')
+            or application_data.get('household_monthly_income')
+            or (weekly_income * 4.33 if weekly_income > 0 else 0.0)
+            or 0.0
+        )
+        annual_income = float(
+            application_data.get('annual_income_estimate')
+            or (monthly_income * 12.0 if monthly_income > 0 else out.get('AMT_INCOME_TOTAL', 0.0))
+        )
         requested_amount = float(application_data.get('requested_amount') or out.get('AMT_CREDIT', 0.0))
         tenure = int(application_data.get('requested_tenure_months') or 12)
         household_size = float(application_data.get('household_size') or out.get('CNT_FAM_MEMBERS', 1.0) or 1.0)
@@ -353,7 +475,6 @@ class CreditScorer:
             out['enquiry_acceleration'] = inq_month / max((inq_year / 12.0), 1e-6)
 
         seg = str(application_data.get('user_category') or 'low_income_salaried').strip().lower()
-        seg_caps = self.winner_artifacts.get('segment_thresholds', {})
         emi_caps = {
             'farmer': 0.30,
             'daily_wage_worker': 0.25,
@@ -371,8 +492,28 @@ class CreditScorer:
         out['feat_daily_monthly_income_proxy'] = float(application_data.get('average_daily_earnings', 0.0)) * float(application_data.get('days_worked_per_month', 22.0))
         out['feat_daily_emi_pressure'] = annuity_ratio
 
-        out['feat_gig_platform_trust_proxy'] = float(application_data.get('platform_trust_score', 0.3))
-        out['feat_gig_income_variability_proxy'] = float(application_data.get('weekly_income_cv', 0.5))
+        platforms = application_data.get('platforms') or []
+        platform_count = float(application_data.get('platform_count') or len(platforms) or 0.0)
+        derived_platform_trust = 0.3
+        if isinstance(platforms, list) and platforms:
+            scores = [PLATFORM_TRUST_SCORES.get(str(p).lower(), 0.3) for p in platforms]
+            derived_platform_trust = max(scores) if scores else 0.3
+        elif platform_count > 0:
+            derived_platform_trust = min(0.85, 0.4 + (0.12 * platform_count))
+
+        active_days = float(application_data.get('active_days_per_week') or 0.0)
+        derived_income_variability = max(0.0, min(1.0, 1.0 - (active_days / 7.0))) if active_days > 0 else 0.5
+
+        out['feat_gig_platform_trust_proxy'] = float(
+            application_data.get('platform_trust_score')
+            or application_data.get('digital_payment_ratio')
+            or derived_platform_trust
+        )
+        out['feat_gig_income_variability_proxy'] = float(
+            application_data.get('weekly_income_cv')
+            or application_data.get('income_variability')
+            or derived_income_variability
+        )
         out['feat_gig_activity_proxy'] = float(application_data.get('active_days_per_week', 4.0)) / 7.0
 
         revenue = float(application_data.get('monthly_revenue', 0.0))
@@ -711,8 +852,12 @@ class CreditScorer:
                 indexed, key=lambda x: x[1]
             )[:5]
             
+            expected = self.shap_explainer.expected_value
+            if isinstance(expected, (list, tuple, np.ndarray)):
+                expected = expected[0]
+
             return {
-                'base_value': float(self.shap_explainer.expected_value),
+                'base_value': float(expected),
                 'shap_values': {k: float(v) for k, v in shap_dict.items()},
                 'top_positive_factors': [
                     {'feature': name, 'value': float(val)} 

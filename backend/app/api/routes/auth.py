@@ -43,6 +43,7 @@ def _to_user_response(user: User) -> UserResponse:
         email=user.email,
         phone_number=user.phone_number,
         full_name=user.full_name,
+        role=user.role.value if user.role else None,
         date_of_birth=user.date_of_birth,
         gender=user.gender,
         aadhaar_number=user.aadhaar_number,

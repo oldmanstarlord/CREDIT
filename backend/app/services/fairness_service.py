@@ -254,12 +254,14 @@ class FairnessMonitor:
             return {}
         
         try:
-            from app.models.models import LoanApplication, AuditLog
+            from app.models.models import LoanApplication, AuditLog, User
             
             cutoff_date = datetime.utcnow() - timedelta(days=time_window_days)
             
-            # Get recent decisions
-            applications = self.db.query(LoanApplication).filter(
+            # Get recent decisions with user data
+            applications = self.db.query(LoanApplication).join(
+                User, LoanApplication.user_id == User.id
+            ).filter(
                 LoanApplication.created_at >= cutoff_date,
                 LoanApplication.final_decision.isnot(None)
             ).all()
@@ -274,8 +276,8 @@ class FairnessMonitor:
                     'id': str(app.id),
                     'gender': getattr(app, 'gender', None),
                     'region': getattr(app, 'region', None),  # computed from location
-                    'user_category': app.user_category,
-                    'final_decision': app.final_decision,
+                    'user_category': app.user.user_category.value if app.user and app.user.user_category else 'unknown',
+                    'final_decision': app.final_decision.value if app.final_decision else None,
                     'probability_of_default': app.probability_of_default,
                     'credit_score': app.credit_score,
                     'created_at': app.created_at

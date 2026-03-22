@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Barclays Credit Intelligence Platform"
     APP_VERSION: str = "1.0.0"
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    ENVIRONMENT: str = "production"
+    DEBUG: bool = False
     
     # API
     API_V1_PREFIX: str = "/api/v1"
@@ -53,6 +53,7 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: Optional[str] = None
     OPENROUTER_MODEL: str = "meta-llama/llama-3.1-8b-instruct:free"
+    OPENROUTER_FALLBACK_MODELS: str = "openai/gpt-oss-20b:free,google/gemma-3n-e4b-it:free,qwen/qwen3-4b:free"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     OPENROUTER_SITE_URL: Optional[str] = None
     OPENROUTER_APP_NAME: str = "Barclays Credit Intelligence Platform"
@@ -62,6 +63,7 @@ class Settings(BaseSettings):
     
     # ML Model Configuration
     ML_MODEL_VERSION: str = "v1.0.0"
+    ML_USE_CALIBRATOR: bool = False
     DECISION_THRESHOLD: float = 0.35
     AUTO_REJECT_PD_THRESHOLD: float = 0.65
     AUTO_APPROVE_PD_THRESHOLD: float = 0.15

@@ -134,6 +134,96 @@ def _merge_application_payload(request: LoanApplicationSubmitRequest) -> Dict[st
     return payload
 
 
+def _require_numeric(payload: Dict[str, Any], keys: list[str], category: str):
+    missing = []
+    for key in keys:
+        val = payload.get(key)
+        if val is None:
+            missing.append(key)
+            continue
+        try:
+            float(val)
+        except (TypeError, ValueError):
+            missing.append(key)
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": f"Missing/invalid required features for {category} scoring",
+                "required_fields": keys,
+                "missing_or_invalid": missing,
+            },
+        )
+
+
+def _has_any_non_empty(payload: Dict[str, Any], keys: list[str]) -> bool:
+    for key in keys:
+        val = payload.get(key)
+        if val is None:
+            continue
+        if isinstance(val, str) and not val.strip():
+            continue
+        if isinstance(val, list) and len(val) == 0:
+            continue
+        return True
+    return False
+
+
+def _validate_category_payload(merged_payload: Dict[str, Any], category_enum: UserCategory):
+    """Reject under-specified requests that would otherwise rely on ML fallback defaults."""
+    if category_enum == UserCategory.GIG_WORKER:
+        income_keys = ["avg_monthly_income", "monthly_income", "average_weekly_earnings"]
+        behavior_keys = [
+            "income_variability",
+            "weekly_income_cv",
+            "digital_payment_ratio",
+            "platform_trust_score",
+            "active_days_per_week",
+            "platforms",
+            "platform_count",
+        ]
+        if not _has_any_non_empty(merged_payload, income_keys):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "Missing required income features for gig_worker scoring",
+                    "required_any_of": income_keys,
+                },
+            )
+        if not _has_any_non_empty(merged_payload, behavior_keys):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "Missing required behavior features for gig_worker scoring",
+                    "required_any_of": behavior_keys,
+                },
+            )
+    elif category_enum == UserCategory.LOW_INCOME_SALARIED:
+        _require_numeric(
+            merged_payload,
+            ["monthly_salary_net", "employment_tenure_months"],
+            "low_income_salaried",
+        )
+    elif category_enum == UserCategory.DAILY_WAGE_WORKER:
+        _require_numeric(
+            merged_payload,
+            ["average_daily_earnings", "days_worked_per_month"],
+            "daily_wage_worker",
+        )
+    elif category_enum == UserCategory.MSME_OWNER:
+        _require_numeric(
+            merged_payload,
+            ["monthly_revenue", "monthly_expenses"],
+            "msme_owner",
+        )
+    elif category_enum == UserCategory.FARMER:
+        _require_numeric(
+            merged_payload,
+            ["land_size", "region_land_price_per_acre"],
+            "farmer",
+        )
+
+
 def _uuid_or_400(value: str, field_name: str) -> uuid.UUID:
     try:
         return uuid.UUID(str(value))
@@ -191,6 +281,7 @@ async def submit_application(
         ) from exc
 
     merged_payload = _merge_application_payload(request)
+    _validate_category_payload(merged_payload, category_enum)
     fraud_score = float(fraud_service.compute_fraud_score(merged_payload))
     fraud_check_passed = fraud_score < settings.FRAUD_SCORE_REJECT_THRESHOLD
 
@@ -264,6 +355,7 @@ async def submit_application(
             application.risk_band = _risk_band_from_text(scored["risk_band"])
             application.ml_model_version = scored.get("model_version")
             application.ml_scores_computed_at = datetime.utcnow()
+            application.ml_scoring_result = scored
 
             policy_input = {
                 "estimated_emi": scored.get("loan_recommendation", {}).get("estimated_emi_max", 0),
@@ -430,6 +522,7 @@ async def get_credit_score(
             application.risk_band = _risk_band_from_text(result["risk_band"])
             application.ml_model_version = result.get("model_version")
             application.ml_scores_computed_at = datetime.utcnow()
+            application.ml_scoring_result = result
             db.commit()
 
             audit = AuditService(db)
@@ -453,18 +546,22 @@ async def get_credit_score(
                 detail={"message": "Scoring failed for this application", "error": str(e)},
             )
     else:
+        cached = application.ml_scoring_result or {}
         result = {
-            "credit_score": application.credit_score,
-            "risk_band": application.risk_band.value if application.risk_band else "high",
-            "probability_of_default": application.probability_of_default,
-            "loan_recommendation": {},
-            "decision_status": "manual_review",
-            "confidence_tier": "medium",
-            "reason_flag": application.decision_reason or "db_cached",
+            "credit_score": cached.get("credit_score", application.credit_score),
+            "risk_band": cached.get("risk_band", application.risk_band.value if application.risk_band else "high"),
+            "probability_of_default": cached.get("probability_of_default", application.probability_of_default),
+            "loan_recommendation": cached.get("loan_recommendation", {}),
+            "decision_status": cached.get("decision_status", "manual_review"),
+            "confidence_tier": cached.get("confidence_tier", "medium"),
+            "reason_flag": cached.get("reason_flag", application.decision_reason or "db_cached"),
+            "shap_explanation": cached.get("shap_explanation"),
+            "pillar_scores": cached.get("pillar_scores", {}),
         }
 
     loan_rec = result.get("loan_recommendation", {})
     shap_expl = result.get("shap_explanation") or {}
+    pillar_scores = result.get("pillar_scores", {}) or {}
     top_pos = [x.get("feature") for x in shap_expl.get("top_positive_factors", [])][:5]
     top_neg = [x.get("feature") for x in shap_expl.get("top_negative_factors", [])][:5]
 
@@ -480,11 +577,11 @@ async def get_credit_score(
         interest_rate_max=loan_rec.get("interest_rate_max"),
         estimated_emi_min=loan_rec.get("estimated_emi_min"),
         estimated_emi_max=loan_rec.get("estimated_emi_max"),
-        income_stability_score=18,
-        repayment_capacity_score=22,
-        spending_data_score=10,
-        profile_completeness_score=8,
-        alternative_data_score=14,
+        income_stability_score=pillar_scores.get("income_stability", 12),
+        repayment_capacity_score=pillar_scores.get("repayment_capacity", 15),
+        spending_data_score=pillar_scores.get("spending_data", 8),
+        profile_completeness_score=pillar_scores.get("profile_completeness", 5),
+        alternative_data_score=pillar_scores.get("alternative_data", 10),
         top_positive_factors=top_pos or ["income_stability", "low_delinquency"],
         top_negative_factors=top_neg or ["debt_burden", "recent_late_payment"],
         shap_summary=f"Decision: {result.get('decision_status')} | Confidence: {result.get('confidence_tier')} | Reason: {result.get('reason_flag')}",
